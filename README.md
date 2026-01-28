@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
 *Empowering creators to monetize content directly through chat conversations*
 
@@ -55,7 +55,7 @@ ChatCommerce is an **open-source NestJS API** that enables a new paradigm of com
 ## 🛠️ Tech Stack
 
 - **Framework**: [NestJS](https://nestjs.com/) (TypeScript)
-- **Database**: PostgreSQL with TypeORM
+- **Database**: MongoDB with Mongoose
 - **Real-time**: WebSockets via `@nestjs/websockets` with Socket.IO
 - **File Storage**: Local filesystem (MVP) → S3-ready architecture
 - **Payments**: Stripe (MVP) → Web3 wallet integration ready
@@ -68,10 +68,32 @@ ChatCommerce is an **open-source NestJS API** that enables a new paradigm of com
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- PostgreSQL (v12 or higher)
+- MongoDB (v6.0 or higher) or Docker
 - npm or yarn
 
 ### Installation
+
+#### Option 1: Using Docker Compose (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/chat_commerce.git
+cd chat_commerce
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your MongoDB credentials and Stripe keys
+
+# Start MongoDB and application
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+```
+
+The API will be available at `http://localhost:3000`
+
+#### Option 2: Local Development
 
 ```bash
 # Clone the repository
@@ -85,8 +107,8 @@ npm install
 cp .env.example .env
 # Edit .env with your database and Stripe credentials
 
-# Run database migrations
-npm run migration:run
+# Start MongoDB (if using Docker)
+docker-compose up -d mongodb
 
 # Start development server
 npm run start:dev
@@ -94,15 +116,20 @@ npm run start:dev
 
 The API will be available at `http://localhost:3000`
 
+> 💡 **Tip**: See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker setup instructions and [SECURITY.md](SECURITY.md) for production security guidelines.
+
 ### Environment Variables
 
 ```env
-# Database
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=your_user
-DATABASE_PASSWORD=your_password
-DATABASE_NAME=chat_commerce
+# Database (MongoDB)
+MONGODB_URI=mongodb://username:password@localhost:27017/chat_commerce?authSource=admin
+# Or for local development without auth:
+# MONGODB_URI=mongodb://localhost:27017/chat_commerce
+
+# MongoDB Configuration (for Docker)
+MONGO_ROOT_USERNAME=admin
+MONGO_ROOT_PASSWORD=your_strong_password
+MONGO_DATABASE=chat_commerce
 
 # JWT
 JWT_SECRET=your_jwt_secret

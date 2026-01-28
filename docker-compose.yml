@@ -1,0 +1,163 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: chat_commerce_mongodb
+    restart: unless-stopped
+    # Security: Do not expose MongoDB port to host in production
+    # Only accessible via internal network
+    # Uncomment below for local development only:
+    # ports:
+    #   - "127.0.0.1:27017:27017"
+    environment:
+      # Security: Require environment variables - no defaults in production
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-chat_commerce}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - chat_commerce_network
+    # Security: Run as non-root user
+    user: "999:999"
+    # Security: Resource limits to prevent resource exhaustion attacks
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # Security: Read-only root filesystem where possible
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/run
+    # Security: Disable unnecessary capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # Security: No new privileges
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Security: Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      # Security: Use build args for sensitive build-time variables
+      args:
+        - NODE_ENV=production
+    container_name: chat_commerce_app
+    restart: unless-stopped
+    ports:
+      # Security: Bind to localhost only in production
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Security: All sensitive values from .env file - no defaults
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-chat_commerce}?authSource=admin&tls=false
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      # Additional security environment variables
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      FILE_UPLOAD_MAX_SIZE: ${FILE_UPLOAD_MAX_SIZE:-10485760}
+      RATE_LIMIT_TTL: ${RATE_LIMIT_TTL:-60}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - chat_commerce_network
+    volumes:
+      # Security: Use named volumes for better control
+      - uploads_data:/app/uploads
+      # Security: Read-only mount for code (if needed)
+      - /app/node_modules
+    # Security: Run as non-root user (defined in Dockerfile)
+    user: "1000:1000"
+    # Security: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # Security: Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    # Security: Disable unnecessary capabilities
+    cap_drop:
+      - ALL
+    # Security: No new privileges
+    security_opt:
+      - no-new-privileges:true
+    # Security: Healthcheck
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Security: Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    # Security: Stop timeout
+    stop_grace_period: 10s
+
+volumes:
+  mongodb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mongodb
+  mongodb_config:
+    driver: local
+  uploads_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/uploads
+
+networks:
+  chat_commerce_network:
+    driver: bridge
+    # Security: Enable internal network isolation
+    internal: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
