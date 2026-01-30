@@ -332,6 +332,6 @@ Special thanks to:
 
 **Ready to build the future of chat-based commerce? Let's build it together! 🚀**
 
-[⭐ Star us on GitHub](https://github.com/yourusername/chat_commerce) | [🤝 Contribute](CONTRIBUTING.md) | [📖 Documentation](https://docs.chatcommerce.io)
+[⭐ Star us on GitHub](https://github.com/EthereumChatCommerce/EthereumChatCommerce) | [🤝 Contribute](CONTRIBUTING.md) | [📖 Documentation](https://docs.chatcommerce.io)
 
 </div>
